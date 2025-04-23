@@ -3,6 +3,7 @@ import httpx
 import time
 from typing import Dict, List, Optional
 import os
+import json
 import uvicorn
 from fastapi.security.api_key import APIKeyQuery, APIKeyHeader, APIKeyCookie
 from datetime import datetime
@@ -22,6 +23,48 @@ BROWSERLESS_URL = os.getenv("BROWSERLESS_URL", "http://localhost:9897")
 DEFAULT_VIEWPORT_WIDTH = int(os.getenv("DEFAULT_VIEWPORT_WIDTH", "1280"))
 DEFAULT_VIEWPORT_HEIGHT = int(os.getenv("DEFAULT_VIEWPORT_HEIGHT", "800"))
 WAIT_FOR_LOAD = os.getenv("WAIT_FOR_LOAD", "networkidle2")  # Other options: load, domcontentloaded, networkidle0
+
+# Standard device presets from Puppeteer/Chrome DevTools Protocol
+# Source: https://github.com/puppeteer/puppeteer/blob/main/packages/puppeteer-core/src/common/DeviceDescriptors.ts
+DEVICES = {
+    # Apple Devices
+    "iphone5": {"width": 320, "height": 568, "deviceScaleFactor": 2, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1"},
+    "iphone6": {"width": 375, "height": 667, "deviceScaleFactor": 2, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1"},
+    "iphone6plus": {"width": 414, "height": 736, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1"},
+    "iphonex": {"width": 375, "height": 812, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1"},
+    "iphone12": {"width": 390, "height": 844, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1"},
+    "iphone13": {"width": 390, "height": 844, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"},
+    "iphone13mini": {"width": 375, "height": 812, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"},
+    "iphone13pro": {"width": 390, "height": 844, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"},
+    "iphone13promax": {"width": 428, "height": 926, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"},
+    "iphone14": {"width": 390, "height": 844, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"},
+    "iphone14pro": {"width": 393, "height": 852, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"},
+    "iphone14promax": {"width": 430, "height": 932, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"},
+    "ipadmini": {"width": 768, "height": 1024, "deviceScaleFactor": 2, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPad; CPU OS 11_0 like Mac OS X) AppleWebKit/604.1.34 (KHTML, like Gecko) Version/11.0 Mobile/15A5341f Safari/604.1"},
+    "ipad": {"width": 810, "height": 1080, "deviceScaleFactor": 2, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPad; CPU OS 11_0 like Mac OS X) AppleWebKit/604.1.34 (KHTML, like Gecko) Version/11.0 Mobile/15A5341f Safari/604.1"},
+    "ipadpro": {"width": 1024, "height": 1366, "deviceScaleFactor": 2, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPad; CPU OS 11_0 like Mac OS X) AppleWebKit/604.1.34 (KHTML, like Gecko) Version/11.0 Mobile/15A5341f Safari/604.1"},
+    
+    # Android Devices
+    "pixel2": {"width": 411, "height": 731, "deviceScaleFactor": 2.625, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (Linux; Android 8.0; Pixel 2 Build/OPD3.170816.012) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3765.0 Mobile Safari/537.36"},
+    "pixel3": {"width": 393, "height": 786, "deviceScaleFactor": 2.75, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (Linux; Android 9; Pixel 3 Build/PQ1A.181105.017.A1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.158 Mobile Safari/537.36"},
+    "pixel4": {"width": 393, "height": 830, "deviceScaleFactor": 2.75, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (Linux; Android 10; Pixel 4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Mobile Safari/537.36"},
+    "pixel5": {"width": 393, "height": 851, "deviceScaleFactor": 2.75, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36"},
+    "pixel6": {"width": 393, "height": 851, "deviceScaleFactor": 2.8, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.104 Mobile Safari/537.36"},
+    "pixel7": {"width": 412, "height": 915, "deviceScaleFactor": 2.8, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"},
+    "samsungs8": {"width": 360, "height": 740, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (Linux; Android 8.0.0; SM-G950U Build/R16NW) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.111 Mobile Safari/537.36"},
+    "samsungs9": {"width": 360, "height": 740, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (Linux; Android 8.0.0; SM-G960U Build/R16NW) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.111 Mobile Safari/537.36"},
+    "samsungs20": {"width": 360, "height": 800, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (Linux; Android 10; SM-G980F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Mobile Safari/537.36"},
+    "galaxytabs7": {"width": 753, "height": 1193, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (Linux; Android 10; SM-T870) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.62 Safari/537.36"},
+    
+    # Desktop presets
+    "desktop": {"width": 1280, "height": 800, "deviceScaleFactor": 1, "isMobile": False, "hasTouch": False},
+    "desktop-hd": {"width": 1920, "height": 1080, "deviceScaleFactor": 1, "isMobile": False, "hasTouch": False},
+    "desktop-4k": {"width": 3840, "height": 2160, "deviceScaleFactor": 2, "isMobile": False, "hasTouch": False},
+    "macbook-air": {"width": 1280, "height": 800, "deviceScaleFactor": 2, "isMobile": False, "hasTouch": False},
+    "macbook-pro": {"width": 1440, "height": 900, "deviceScaleFactor": 2, "isMobile": False, "hasTouch": False},
+    "macbook-pro-16": {"width": 1536, "height": 960, "deviceScaleFactor": 2, "isMobile": False, "hasTouch": False},
+    "surface-book": {"width": 1500, "height": 1000, "deviceScaleFactor": 2, "isMobile": False, "hasTouch": True}
+}
 
 # Parse tokens from environment variable
 TOKENS = os.getenv("TOKENS", "").split(",")
@@ -72,18 +115,47 @@ async def screenshot(
     url: str = None,
     width: Optional[int] = None,
     height: Optional[int] = None,
+    device: Optional[str] = None,
     token: str = Depends(get_api_key)
 ):
     if not url:
         raise HTTPException(status_code=400, detail="URL parameter is required")
     
-    # Use provided dimensions or defaults
-    viewport_width = width or DEFAULT_VIEWPORT_WIDTH
-    viewport_height = height or DEFAULT_VIEWPORT_HEIGHT
+    # Initialize viewport with defaults
+    viewport = {
+        "width": DEFAULT_VIEWPORT_WIDTH,
+        "height": DEFAULT_VIEWPORT_HEIGHT,
+        "deviceScaleFactor": 1,
+        "isMobile": False,
+        "hasTouch": False
+    }
+    
+    # Override with device preset if specified
+    user_agent = None
+    device_info = ""
+    if device:
+        device = device.lower()  # Normalize device name
+        if device in DEVICES:
+            viewport.update(DEVICES[device])
+            if "userAgent" in DEVICES[device]:
+                user_agent = DEVICES[device]["userAgent"]
+            device_info = f" using device preset: {device}"
+        else:
+            available_devices = ", ".join(DEVICES.keys())
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Unknown device: {device}. Available devices: {available_devices}"
+            )
+    
+    # Override with custom dimensions if specified
+    if width:
+        viewport["width"] = width
+    if height:
+        viewport["height"] = height
     
     # Get client information for logging
     client_ip = request.client.host
-    user_agent = request.headers.get("user-agent", "Unknown")
+    client_user_agent = request.headers.get("user-agent", "Unknown")
     referer = request.headers.get("referer", "Unknown")
     current_time = get_current_time()
     
@@ -92,7 +164,7 @@ async def screenshot(
     total_screenshots = screenshots_per_ip[client_ip]
     
     # Log the screenshot request with detailed information
-    print(f"[SCREENSHOT] Time: {current_time} | IP: {client_ip} | Total: {total_screenshots} | User-Agent: {user_agent} | Referer: {referer} | URL: {url} | Resolution: {viewport_width}x{viewport_height}")
+    print(f"[SCREENSHOT] Time: {current_time} | IP: {client_ip} | Total: {total_screenshots} | User-Agent: {client_user_agent} | Referer: {referer} | URL: {url} | Resolution: {viewport['width']}x{viewport['height']}{device_info}")
     
     # Check rate limit
     now = time.time()
@@ -109,25 +181,27 @@ async def screenshot(
             browserless_endpoint = f"{BROWSERLESS_URL}/chrome/screenshot"
             print(f"Sending request to: {browserless_endpoint}")
             
-            # Enhanced request with viewport and waiting options
+            # Build request JSON
+            request_data = {
+                "url": url,
+                "options": {
+                    "fullPage": True,
+                    "type": "png"
+                },
+                "gotoOptions": {
+                    "waitUntil": WAIT_FOR_LOAD,
+                    "timeout": 25000  # 25 seconds timeout for page load
+                },
+                "viewport": viewport
+            }
+            
+            # Add user agent if set by device preset
+            if user_agent:
+                request_data["userAgent"] = user_agent
+                
             response = await client.post(
                 browserless_endpoint,
-                json={
-                    "url": url,
-                    "options": {
-                        "fullPage": True,
-                        "type": "png"
-                    },
-                    "gotoOptions": {
-                        "waitUntil": WAIT_FOR_LOAD,
-                        "timeout": 25000  # 25 seconds timeout for page load
-                    },
-                    "viewport": {
-                        "width": viewport_width,
-                        "height": viewport_height,
-                        "deviceScaleFactor": 1
-                    }
-                },
+                json=request_data,
                 timeout=30.0
             )
             
@@ -159,6 +233,20 @@ async def screenshot(
         print(f"[ERROR] {client_ip}: {error_msg}")
         raise HTTPException(status_code=500, detail=f"Error taking screenshot: {error_msg}")
 
+@app.get("/devices")
+async def list_devices():
+    """Return a list of all available device presets"""
+    result = {}
+    for device_name, specs in DEVICES.items():
+        result[device_name] = {
+            "width": specs["width"],
+            "height": specs["height"],
+            "deviceScaleFactor": specs["deviceScaleFactor"],
+            "isMobile": specs["isMobile"],
+            "hasTouch": specs["hasTouch"]
+        }
+    return result
+
 @app.get("/")
 async def root(request: Request):
     client_ip = request.client.host
@@ -174,7 +262,9 @@ async def root(request: Request):
         "message": f"Welcome to screencurl. Use /screenshot?url=https://example.com to get screenshots.{auth_note}",
         "options": {
             "resolution": f"Default: {DEFAULT_VIEWPORT_WIDTH}x{DEFAULT_VIEWPORT_HEIGHT} (can be changed with width and height parameters)",
-            "wait_strategy": WAIT_FOR_LOAD
+            "wait_strategy": WAIT_FOR_LOAD,
+            "device_emulation": "Use /screenshot?url=example.com&device=iphone13 to emulate specific devices",
+            "available_devices": "View all available devices at /devices"
         }
     }
 
@@ -185,4 +275,5 @@ if __name__ == "__main__":
     print(f"Authentication {'enabled with ' + str(len(TOKENS)) + ' tokens' if TOKENS else 'disabled'}")
     print(f"Default screenshot resolution: {DEFAULT_VIEWPORT_WIDTH}x{DEFAULT_VIEWPORT_HEIGHT}")
     print(f"Page load wait strategy: {WAIT_FOR_LOAD}")
+    print(f"Available device presets: {len(DEVICES)}")
     uvicorn.run("main:app", host="0.0.0.0", port=port, log_level="info")

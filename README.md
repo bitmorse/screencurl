@@ -48,6 +48,29 @@ http://localhost:9898/screenshot?url=https://example.com
 <img src="http://localhost:9898/screenshot?url=https://example.com" alt="Website Screenshot" />
 ```
 
+### Device Emulation
+
+Screencurl can emulate various devices for more realistic screenshots:
+
+```bash
+# Take a screenshot as if viewed on an iPhone 13
+http://localhost:9898/screenshot?url=https://example.com&device=iphone13
+
+# See all available devices
+http://localhost:9898/devices
+```
+
+Available devices include:
+- Apple devices: iphone5, iphone6, iphone13, iphone14pro, ipadmini, ipad, ipadpro
+- Android devices: pixel2 through pixel7, samsungs8, samsungs20, galaxytabs7
+- Desktop presets: desktop, desktop-hd, desktop-4k, macbook-air, macbook-pro, surface-book
+
+Custom dimensions always override device presets:
+```bash
+# iPhone 13 aspect ratio but with custom width
+http://localhost:9898/screenshot?url=https://example.com&device=iphone13&width=500
+```
+
 ## 🔧 Configuration
 
 ### Environment Variables

@@ -11,5 +11,10 @@ services:
       - "9898:9898"
     environment:
       - BROWSERLESS_URL=http://browserless:3000
+      - TOKENS=secret-token-1,secret-token-2
+      - TIMEZONE=America/New_York
+      - DEFAULT_VIEWPORT_WIDTH=1920
+      - DEFAULT_VIEWPORT_HEIGHT=1080
+      - WAIT_FOR_LOAD=networkidle0  # Strictest option - waits until there are 0 network connections for 500ms
     depends_on:
       - browserless
