@@ -1,15 +1,3 @@
-:::thinking
-Let me create an improved README that offers the best quickstart developer experience. I'll focus on:
-
-1. Clear, concise steps
-2. Visual aids (emoji/formatting) to improve readability
-3. Getting developers up and running as quickly as possible
-4. Providing all essential information without overwhelming
-5. Examples that work out of the box
-6. Troubleshooting tips for common issues
-
-This should make it extremely easy for developers to get started with screencurl.
-:::
 # screencurl 📸
 
 A dead-simple service that turns URLs into screenshots via GET requests, powered by Browserless with rate limiting.
@@ -69,7 +57,44 @@ http://localhost:9898/screenshot?url=https://example.com
 | `PORT` | Port to run the service on | `9898` |
 | `BROWSERLESS_URL` | URL of the Browserless service | `http://localhost:9897` |
 
-### Docker Compose
+## 🔒 Authentication
+
+screencurl supports token-based authentication to restrict access to the screenshot service.
+
+### Enabling Authentication
+
+Set the `TOKENS` environment variable with a comma-separated list of allowed tokens:
+
+```bash
+# Single token
+TOKENS=your-secret-token
+
+# Multiple tokens
+TOKENS=token1,token2,token3
+```
+
+If `TOKENS` is not set or empty, authentication is disabled and the service is publicly accessible.
+
+### Using Authentication
+
+Once enabled, you can authenticate using one of these three methods:
+
+**1. Query Parameter:**
+```
+http://localhost:9898/screenshot?url=https://example.com&token=your-secret-token
+```
+
+**2. Request Header:**
+```bash
+curl -H "X-API-Token: your-secret-token" "http://localhost:9898/screenshot?url=https://example.com"
+```
+
+**3. Cookie:**
+```bash
+curl -b "token=your-secret-token" "http://localhost:9898/screenshot?url=https://example.com"
+```
+
+### Docker Compose Configuration
 
 ```yaml
 version: '3'
@@ -77,6 +102,7 @@ services:
   browserless:
     image: ghcr.io/browserless/chrome
     restart: always
+  
   screencurl:
     image: ghcr.io/bitmorse/screencurl
     restart: always
@@ -84,6 +110,7 @@ services:
       - "9898:9898"
     environment:
       - BROWSERLESS_URL=http://browserless:3000
+      - TOKENS=secret-token-1,secret-token-2
     depends_on:
       - browserless
 ```

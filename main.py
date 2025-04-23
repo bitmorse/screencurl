@@ -1,9 +1,10 @@
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Response, Query, Depends, Security
 import httpx
 import time
-from typing import Dict
+from typing import Dict, List, Optional
 import os
 import uvicorn
+from fastapi.security.api_key import APIKeyQuery, APIKeyCookie, APIKeyHeader
 
 app = FastAPI(title="screencurl")
 
@@ -12,8 +13,40 @@ screenshot_times: Dict[str, float] = {}
 RATE_LIMIT_SECONDS = 10
 BROWSERLESS_URL = os.getenv("BROWSERLESS_URL", "http://localhost:9897")
 
+# Parse tokens from environment variable
+TOKENS = os.getenv("TOKENS", "").split(",")
+TOKENS = [token.strip() for token in TOKENS if token.strip()]  # Remove empty tokens
+
+# API key security schemes
+api_key_query = APIKeyQuery(name="token", auto_error=False)
+api_key_header = APIKeyHeader(name="X-API-Token", auto_error=False)
+api_key_cookie = APIKeyCookie(name="token", auto_error=False)
+
+async def get_api_key(
+    query_token: str = Security(api_key_query),
+    header_token: str = Security(api_key_header),
+    cookie_token: str = Security(api_key_cookie),
+) -> str:
+    # If no tokens are configured, authentication is disabled
+    if not TOKENS:
+        return None
+    
+    # Check if the token is in the configured tokens
+    for token in [query_token, header_token, cookie_token]:
+        if token and token in TOKENS:
+            return token
+    
+    raise HTTPException(
+        status_code=401,
+        detail="Invalid or missing API token",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
 @app.get("/screenshot")
-async def screenshot(url: str = None):
+async def screenshot(
+    url: str = None,
+    token: str = Depends(get_api_key)
+):
     if not url:
         raise HTTPException(status_code=400, detail="URL parameter is required")
     
@@ -32,7 +65,7 @@ async def screenshot(url: str = None):
             browserless_endpoint = f"{BROWSERLESS_URL}/chrome/screenshot"
             print(f"Sending request to: {browserless_endpoint}")
             
-            # Match the format from the curl example for better compatibility
+            # Match the format from the curl example exactly
             response = await client.post(
                 browserless_endpoint,
                 json={
@@ -53,9 +86,12 @@ async def screenshot(url: str = None):
                     detail=f"Error from browserless service: {error_detail[:200]}"
                 )
             
+            # Get content type from response header or default to image/png
+            content_type = response.headers.get("content-type", "image/png")
+            
             return Response(
                 content=response.content,
-                media_type="image/png",
+                media_type=content_type,
                 headers={"Cache-Control": "public, max-age=10"}
             )
     except httpx.RequestError as e:
@@ -69,10 +105,18 @@ async def screenshot(url: str = None):
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to screencurl. Use /screenshot?url=https://example.com to get screenshots."}
+    if TOKENS:
+        auth_note = " Authentication is required."
+    else:
+        auth_note = " No authentication required."
+        
+    return {
+        "message": f"Welcome to screencurl. Use /screenshot?url=https://example.com to get screenshots.{auth_note}"
+    }
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "9898"))
     print(f"screencurl service listening at http://localhost:{port}")
     print(f"Using Browserless at {BROWSERLESS_URL}")
+    print(f"Authentication {'enabled with ' + str(len(TOKENS)) + ' tokens' if TOKENS else 'disabled'}")
     uvicorn.run("main:app", host="0.0.0.0", port=port, log_level="info")
