@@ -1,0 +1,15 @@
+version: '3'
+services:
+  browserless:
+    image: ghcr.io/browserless/chrome
+    restart: always
+  
+  screencurl:
+    build: .
+    restart: always
+    ports:
+      - "9898:9898"
+    environment:
+      - BROWSERLESS_URL=http://browserless:3000
+    depends_on:
+      - browserless
