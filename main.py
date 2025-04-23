@@ -1,15 +1,19 @@
-from fastapi import FastAPI, HTTPException, Response, Query, Depends, Security
+from fastapi import FastAPI, HTTPException, Response, Query, Depends, Security, Request
 import httpx
 import time
 from typing import Dict, List, Optional
 import os
 import uvicorn
-from fastapi.security.api_key import APIKeyQuery, APIKeyCookie, APIKeyHeader
+from fastapi.security.api_key import APIKeyQuery, APIKeyHeader, APIKeyCookie
+from datetime import datetime
+from collections import defaultdict
 
 app = FastAPI(title="screencurl")
 
 # Simple cache to store the last screenshot time for each URL
 screenshot_times: Dict[str, float] = {}
+# Track screenshot counts per IP
+screenshots_per_ip: Dict[str, int] = defaultdict(int)
 RATE_LIMIT_SECONDS = 10
 BROWSERLESS_URL = os.getenv("BROWSERLESS_URL", "http://localhost:9897")
 
@@ -44,11 +48,25 @@ async def get_api_key(
 
 @app.get("/screenshot")
 async def screenshot(
+    request: Request,
     url: str = None,
     token: str = Depends(get_api_key)
 ):
     if not url:
         raise HTTPException(status_code=400, detail="URL parameter is required")
+    
+    # Get client information for logging
+    client_ip = request.client.host
+    user_agent = request.headers.get("user-agent", "Unknown")
+    referer = request.headers.get("referer", "Unknown")
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Increment screenshot count for this IP
+    screenshots_per_ip[client_ip] += 1
+    total_screenshots = screenshots_per_ip[client_ip]
+    
+    # Log the screenshot request with detailed information
+    print(f"[SCREENSHOT] Time: {current_time} | IP: {client_ip} | Total: {total_screenshots} | User-Agent: {user_agent} | Referer: {referer} | URL: {url}")
     
     # Check rate limit
     now = time.time()
@@ -89,6 +107,9 @@ async def screenshot(
             # Get content type from response header or default to image/png
             content_type = response.headers.get("content-type", "image/png")
             
+            # Log successful screenshot
+            print(f"[SUCCESS] Screenshot generated for {url} by {client_ip}")
+            
             return Response(
                 content=response.content,
                 media_type=content_type,
@@ -96,15 +117,19 @@ async def screenshot(
             )
     except httpx.RequestError as e:
         error_msg = f"Request error: {str(e)}"
-        print(f"Error taking screenshot: {error_msg}")
+        print(f"[ERROR] {client_ip}: {error_msg}")
         raise HTTPException(status_code=500, detail=error_msg)
     except Exception as e:
         error_msg = str(e)
-        print(f"Error taking screenshot: {error_msg}")
+        print(f"[ERROR] {client_ip}: {error_msg}")
         raise HTTPException(status_code=500, detail=f"Error taking screenshot: {error_msg}")
 
 @app.get("/")
-async def root():
+async def root(request: Request):
+    client_ip = request.client.host
+    user_agent = request.headers.get("user-agent", "Unknown")
+    print(f"[INFO] Home page visited by IP: {client_ip} | User-Agent: {user_agent}")
+    
     if TOKENS:
         auth_note = " Authentication is required."
     else:
