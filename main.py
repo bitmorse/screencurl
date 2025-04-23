@@ -3,7 +3,6 @@ import httpx
 import time
 from typing import Dict, List, Optional
 import os
-import json
 import uvicorn
 from fastapi.security.api_key import APIKeyQuery, APIKeyHeader, APIKeyCookie
 from datetime import datetime
@@ -28,42 +27,42 @@ WAIT_FOR_LOAD = os.getenv("WAIT_FOR_LOAD", "networkidle2")  # Other options: loa
 # Source: https://github.com/puppeteer/puppeteer/blob/main/packages/puppeteer-core/src/common/DeviceDescriptors.ts
 DEVICES = {
     # Apple Devices
-    "iphone5": {"width": 320, "height": 568, "deviceScaleFactor": 2, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1"},
-    "iphone6": {"width": 375, "height": 667, "deviceScaleFactor": 2, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1"},
-    "iphone6plus": {"width": 414, "height": 736, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1"},
-    "iphonex": {"width": 375, "height": 812, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1"},
-    "iphone12": {"width": 390, "height": 844, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1"},
-    "iphone13": {"width": 390, "height": 844, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"},
-    "iphone13mini": {"width": 375, "height": 812, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"},
-    "iphone13pro": {"width": 390, "height": 844, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"},
-    "iphone13promax": {"width": 428, "height": 926, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"},
-    "iphone14": {"width": 390, "height": 844, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"},
-    "iphone14pro": {"width": 393, "height": 852, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"},
-    "iphone14promax": {"width": 430, "height": 932, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"},
-    "ipadmini": {"width": 768, "height": 1024, "deviceScaleFactor": 2, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPad; CPU OS 11_0 like Mac OS X) AppleWebKit/604.1.34 (KHTML, like Gecko) Version/11.0 Mobile/15A5341f Safari/604.1"},
-    "ipad": {"width": 810, "height": 1080, "deviceScaleFactor": 2, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPad; CPU OS 11_0 like Mac OS X) AppleWebKit/604.1.34 (KHTML, like Gecko) Version/11.0 Mobile/15A5341f Safari/604.1"},
-    "ipadpro": {"width": 1024, "height": 1366, "deviceScaleFactor": 2, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (iPad; CPU OS 11_0 like Mac OS X) AppleWebKit/604.1.34 (KHTML, like Gecko) Version/11.0 Mobile/15A5341f Safari/604.1"},
+    "iphone5": {"viewport": {"width": 320, "height": 568, "deviceScaleFactor": 2, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1"},
+    "iphone6": {"viewport": {"width": 375, "height": 667, "deviceScaleFactor": 2, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1"},
+    "iphone6plus": {"viewport": {"width": 414, "height": 736, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1"},
+    "iphonex": {"viewport": {"width": 375, "height": 812, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1"},
+    "iphone12": {"viewport": {"width": 390, "height": 844, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1"},
+    "iphone13": {"viewport": {"width": 390, "height": 844, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"},
+    "iphone13mini": {"viewport": {"width": 375, "height": 812, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"},
+    "iphone13pro": {"viewport": {"width": 390, "height": 844, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"},
+    "iphone13promax": {"viewport": {"width": 428, "height": 926, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"},
+    "iphone14": {"viewport": {"width": 390, "height": 844, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"},
+    "iphone14pro": {"viewport": {"width": 393, "height": 852, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"},
+    "iphone14promax": {"viewport": {"width": 430, "height": 932, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"},
+    "ipadmini": {"viewport": {"width": 768, "height": 1024, "deviceScaleFactor": 2, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (iPad; CPU OS 11_0 like Mac OS X) AppleWebKit/604.1.34 (KHTML, like Gecko) Version/11.0 Mobile/15A5341f Safari/604.1"},
+    "ipad": {"viewport": {"width": 810, "height": 1080, "deviceScaleFactor": 2, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (iPad; CPU OS 11_0 like Mac OS X) AppleWebKit/604.1.34 (KHTML, like Gecko) Version/11.0 Mobile/15A5341f Safari/604.1"},
+    "ipadpro": {"viewport": {"width": 1024, "height": 1366, "deviceScaleFactor": 2, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (iPad; CPU OS 11_0 like Mac OS X) AppleWebKit/604.1.34 (KHTML, like Gecko) Version/11.0 Mobile/15A5341f Safari/604.1"},
     
     # Android Devices
-    "pixel2": {"width": 411, "height": 731, "deviceScaleFactor": 2.625, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (Linux; Android 8.0; Pixel 2 Build/OPD3.170816.012) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3765.0 Mobile Safari/537.36"},
-    "pixel3": {"width": 393, "height": 786, "deviceScaleFactor": 2.75, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (Linux; Android 9; Pixel 3 Build/PQ1A.181105.017.A1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.158 Mobile Safari/537.36"},
-    "pixel4": {"width": 393, "height": 830, "deviceScaleFactor": 2.75, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (Linux; Android 10; Pixel 4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Mobile Safari/537.36"},
-    "pixel5": {"width": 393, "height": 851, "deviceScaleFactor": 2.75, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36"},
-    "pixel6": {"width": 393, "height": 851, "deviceScaleFactor": 2.8, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.104 Mobile Safari/537.36"},
-    "pixel7": {"width": 412, "height": 915, "deviceScaleFactor": 2.8, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"},
-    "samsungs8": {"width": 360, "height": 740, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (Linux; Android 8.0.0; SM-G950U Build/R16NW) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.111 Mobile Safari/537.36"},
-    "samsungs9": {"width": 360, "height": 740, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (Linux; Android 8.0.0; SM-G960U Build/R16NW) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.111 Mobile Safari/537.36"},
-    "samsungs20": {"width": 360, "height": 800, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (Linux; Android 10; SM-G980F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Mobile Safari/537.36"},
-    "galaxytabs7": {"width": 753, "height": 1193, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True, "userAgent": "Mozilla/5.0 (Linux; Android 10; SM-T870) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.62 Safari/537.36"},
+    "pixel2": {"viewport": {"width": 411, "height": 731, "deviceScaleFactor": 2.625, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (Linux; Android 8.0; Pixel 2 Build/OPD3.170816.012) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3765.0 Mobile Safari/537.36"},
+    "pixel3": {"viewport": {"width": 393, "height": 786, "deviceScaleFactor": 2.75, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (Linux; Android 9; Pixel 3 Build/PQ1A.181105.017.A1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.158 Mobile Safari/537.36"},
+    "pixel4": {"viewport": {"width": 393, "height": 830, "deviceScaleFactor": 2.75, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (Linux; Android 10; Pixel 4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Mobile Safari/537.36"},
+    "pixel5": {"viewport": {"width": 393, "height": 851, "deviceScaleFactor": 2.75, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36"},
+    "pixel6": {"viewport": {"width": 393, "height": 851, "deviceScaleFactor": 2.8, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.104 Mobile Safari/537.36"},
+    "pixel7": {"viewport": {"width": 412, "height": 915, "deviceScaleFactor": 2.8, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"},
+    "samsungs8": {"viewport": {"width": 360, "height": 740, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (Linux; Android 8.0.0; SM-G950U Build/R16NW) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.111 Mobile Safari/537.36"},
+    "samsungs9": {"viewport": {"width": 360, "height": 740, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (Linux; Android 8.0.0; SM-G960U Build/R16NW) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.111 Mobile Safari/537.36"},
+    "samsungs20": {"viewport": {"width": 360, "height": 800, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (Linux; Android 10; SM-G980F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Mobile Safari/537.36"},
+    "galaxytabs7": {"viewport": {"width": 753, "height": 1193, "deviceScaleFactor": 3, "isMobile": True, "hasTouch": True}, "userAgent": "Mozilla/5.0 (Linux; Android 10; SM-T870) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.62 Safari/537.36"},
     
     # Desktop presets
-    "desktop": {"width": 1280, "height": 800, "deviceScaleFactor": 1, "isMobile": False, "hasTouch": False},
-    "desktop-hd": {"width": 1920, "height": 1080, "deviceScaleFactor": 1, "isMobile": False, "hasTouch": False},
-    "desktop-4k": {"width": 3840, "height": 2160, "deviceScaleFactor": 2, "isMobile": False, "hasTouch": False},
-    "macbook-air": {"width": 1280, "height": 800, "deviceScaleFactor": 2, "isMobile": False, "hasTouch": False},
-    "macbook-pro": {"width": 1440, "height": 900, "deviceScaleFactor": 2, "isMobile": False, "hasTouch": False},
-    "macbook-pro-16": {"width": 1536, "height": 960, "deviceScaleFactor": 2, "isMobile": False, "hasTouch": False},
-    "surface-book": {"width": 1500, "height": 1000, "deviceScaleFactor": 2, "isMobile": False, "hasTouch": True}
+    "desktop": {"viewport": {"width": 1280, "height": 800, "deviceScaleFactor": 1, "isMobile": False, "hasTouch": False}},
+    "desktop-hd": {"viewport": {"width": 1920, "height": 1080, "deviceScaleFactor": 1, "isMobile": False, "hasTouch": False}},
+    "desktop-4k": {"viewport": {"width": 3840, "height": 2160, "deviceScaleFactor": 2, "isMobile": False, "hasTouch": False}},
+    "macbook-air": {"viewport": {"width": 1280, "height": 800, "deviceScaleFactor": 2, "isMobile": False, "hasTouch": False}},
+    "macbook-pro": {"viewport": {"width": 1440, "height": 900, "deviceScaleFactor": 2, "isMobile": False, "hasTouch": False}},
+    "macbook-pro-16": {"viewport": {"width": 1536, "height": 960, "deviceScaleFactor": 2, "isMobile": False, "hasTouch": False}},
+    "surface-book": {"viewport": {"width": 1500, "height": 1000, "deviceScaleFactor": 2, "isMobile": False, "hasTouch": True}}
 }
 
 # Parse tokens from environment variable
@@ -136,7 +135,7 @@ async def screenshot(
     if device:
         device = device.lower()  # Normalize device name
         if device in DEVICES:
-            viewport.update(DEVICES[device])
+            viewport.update(DEVICES[device]["viewport"])
             if "userAgent" in DEVICES[device]:
                 user_agent = DEVICES[device]["userAgent"]
             device_info = f" using device preset: {device}"
@@ -195,7 +194,7 @@ async def screenshot(
                 "viewport": viewport
             }
             
-            # Add user agent if set by device preset
+            # Add user agent as a top-level property, not in viewport
             if user_agent:
                 request_data["userAgent"] = user_agent
                 
@@ -239,12 +238,14 @@ async def list_devices():
     result = {}
     for device_name, specs in DEVICES.items():
         result[device_name] = {
-            "width": specs["width"],
-            "height": specs["height"],
-            "deviceScaleFactor": specs["deviceScaleFactor"],
-            "isMobile": specs["isMobile"],
-            "hasTouch": specs["hasTouch"]
+            "width": specs["viewport"]["width"],
+            "height": specs["viewport"]["height"],
+            "deviceScaleFactor": specs["viewport"]["deviceScaleFactor"],
+            "isMobile": specs["viewport"]["isMobile"],
+            "hasTouch": specs["viewport"]["hasTouch"]
         }
+        if "userAgent" in specs:
+            result[device_name]["userAgent"] = specs["userAgent"]
     return result
 
 @app.get("/")
