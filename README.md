@@ -48,6 +48,14 @@ http://localhost:9898/screenshot?url=https://example.com
 <img src="http://localhost:9898/screenshot?url=https://example.com" alt="Website Screenshot" />
 ```
 
+### Embedding in Grafana
+
+Add the nocache parameter to prevent caching issues and ensure fresh screenshots when Grafana autoreloads:
+
+```html
+<img src="http://localhost:9898/screenshot?url=https://example.com&_nocache=${__from}" alt="Website Screenshot" />
+```
+
 ### Device Emulation
 
 Screencurl can emulate various devices for more realistic screenshots:
