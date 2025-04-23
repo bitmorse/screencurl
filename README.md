@@ -1,15 +1,3 @@
-:::thinking
-Let me create an improved README that offers the best quickstart developer experience. I'll focus on:
-
-1. Clear, concise steps
-2. Visual aids (emoji/formatting) to improve readability
-3. Getting developers up and running as quickly as possible
-4. Providing all essential information without overwhelming
-5. Examples that work out of the box
-6. Troubleshooting tips for common issues
-
-This should make it extremely easy for developers to get started with screencurl.
-:::
 # screencurl 📸
 
 A dead-simple service that turns URLs into screenshots via GET requests, powered by Browserless with rate limiting.
