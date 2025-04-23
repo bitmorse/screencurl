@@ -60,12 +60,6 @@ http://localhost:9898/screenshot?url=https://example.com
 <img src="http://localhost:9898/screenshot?url=https://example.com" alt="Website Screenshot" />
 ```
 
-### curl Command
-
-```bash
-curl -o screenshot.png "http://localhost:9898/screenshot?url=https://example.com"
-```
-
 ## 🔧 Configuration
 
 ### Environment Variables
@@ -74,6 +68,25 @@ curl -o screenshot.png "http://localhost:9898/screenshot?url=https://example.com
 |----------|-------------|---------|
 | `PORT` | Port to run the service on | `9898` |
 | `BROWSERLESS_URL` | URL of the Browserless service | `http://localhost:9897` |
+
+### Docker Compose
+
+```yaml
+version: '3'
+services:
+  browserless:
+    image: ghcr.io/browserless/chrome
+    restart: always
+  screencurl:
+    image: ghcr.io/bitmorse/screencurl
+    restart: always
+    ports:
+      - "9898:9898"
+    environment:
+      - BROWSERLESS_URL=http://browserless:3000
+    depends_on:
+      - browserless
+```
 
 ## 📚 API Documentation
 
