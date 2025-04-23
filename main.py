@@ -108,6 +108,7 @@ def get_current_time():
     """Get current time in the configured timezone with timezone info"""
     return datetime.now(TIMEZONE_OBJ).strftime("%Y-%m-%d %H:%M:%S %Z")
 
+
 @app.get("/screenshot")
 async def screenshot(
     request: Request,
@@ -115,6 +116,9 @@ async def screenshot(
     width: Optional[int] = None,
     height: Optional[int] = None,
     device: Optional[str] = None,
+    format: Optional[str] = None,  # New parameter for format
+    quality: Optional[int] = None, # New parameter for compression quality
+    nocache: Optional[str] = None, # Parameter to prevent caching
     token: str = Depends(get_api_key)
 ):
     if not url:
@@ -180,12 +184,24 @@ async def screenshot(
             browserless_endpoint = f"{BROWSERLESS_URL}/chrome/screenshot"
             print(f"Sending request to: {browserless_endpoint}")
             
-            # Build request JSON
+            # Determine image format and quality
+            img_format = format.lower() if format else "jpeg"  # Default to JPEG instead of PNG
+            if img_format not in ["jpeg", "png", "webp"]:
+                img_format = "jpeg"  # Default to jpeg for invalid formats
+                
+            # Set default quality or use provided quality
+            img_quality = quality if quality is not None else 70  # Good balance of quality vs size
+            if img_quality < 0 or img_quality > 100:
+                img_quality = 70  # Keep in valid range
+                
+            # Build request JSON with optimized image settings
             request_data = {
                 "url": url,
                 "options": {
                     "fullPage": True,
-                    "type": "png"
+                    "type": img_format,
+                    "quality": img_quality,  # JPEG/WebP compression quality
+                    "omitBackground": False  # Smaller file sizes with a background
                 },
                 "gotoOptions": {
                     "waitUntil": WAIT_FOR_LOAD,
@@ -212,16 +228,20 @@ async def screenshot(
                     detail=f"Error from browserless service: {error_detail[:200]}"
                 )
             
-            # Get content type from response header or default to image/png
-            content_type = response.headers.get("content-type", "image/png")
+            # Get content type from response header or default based on format
+            content_type = response.headers.get("content-type", f"image/{img_format}")
             
-            # Log successful screenshot
-            print(f"[SUCCESS] Screenshot generated for {url} by {client_ip} | Size: {len(response.content)} bytes")
+            # Log successful screenshot with format and size
+            print(f"[SUCCESS] Screenshot generated for {url} by {client_ip} | Format: {img_format} | Quality: {img_quality} | Size: {len(response.content)} bytes")
             
             return Response(
                 content=response.content,
                 media_type=content_type,
-                headers={"Cache-Control": "public, max-age=10"}
+                headers={
+                    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+                    "Pragma": "no-cache",
+                    "Expires": "0"
+                }
             )
     except httpx.RequestError as e:
         error_msg = f"Request error: {str(e)}"
@@ -231,7 +251,7 @@ async def screenshot(
         error_msg = str(e)
         print(f"[ERROR] {client_ip}: {error_msg}")
         raise HTTPException(status_code=500, detail=f"Error taking screenshot: {error_msg}")
-
+    
 @app.get("/devices")
 async def list_devices():
     """Return a list of all available device presets"""
