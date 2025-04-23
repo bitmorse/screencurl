@@ -15,7 +15,7 @@ app = FastAPI(title="screencurl")
 screenshot_times: Dict[str, float] = {}
 # Track screenshot counts per IP
 screenshots_per_ip: Dict[str, int] = defaultdict(int)
-RATE_LIMIT_SECONDS = 10
+RATE_LIMIT_SECONDS = int(os.getenv("RATE_LIMIT", "2"))
 BROWSERLESS_URL = os.getenv("BROWSERLESS_URL", "http://localhost:9897")
 
 # Screenshot settings with defaults
