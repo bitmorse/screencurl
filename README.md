@@ -120,22 +120,32 @@ curl -b "token=your-secret-token" "http://localhost:9898/screenshot?url=https://
 ### Docker Compose Configuration
 
 ```yaml
-version: '3'
+version: "3"
 services:
   browserless:
     image: ghcr.io/browserless/chrome
     restart: always
-  
-  screencurl:
+    ports:
+      - 3003:3000
+    environment:
+      - TZ=Europe/Berlin
+
+screencurl:
     image: ghcr.io/bitmorse/screencurl
     restart: always
     ports:
-      - "9898:9898"
+      - 9898:9898
     environment:
+      - TZ=Europe/Berlin
       - BROWSERLESS_URL=http://browserless:3000
-      - TOKENS=secret-token-1,secret-token-2
+      - TOKENS=your-token1,your-other-token2
+      - DEFAULT_VIEWPORT_WIDTH=1920
+      - DEFAULT_VIEWPORT_HEIGHT=1080
+      - WAIT_FOR_LOAD=networkidle0 # Strictest option - waits until there are 0 network connections for 500ms
     depends_on:
       - browserless
+networks: {}
+
 ```
 
 ## 📚 API Documentation

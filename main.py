@@ -70,7 +70,7 @@ TOKENS = os.getenv("TOKENS", "").split(",")
 TOKENS = [token.strip() for token in TOKENS if token.strip()]  # Remove empty tokens
 
 # Get timezone from environment variable or default to UTC
-TIMEZONE = os.getenv("TIMEZONE", "UTC")
+TIMEZONE = os.getenv("TZ", "UTC")
 try:
     TIMEZONE_OBJ = pytz.timezone(TIMEZONE)
     print(f"Using timezone: {TIMEZONE}")
