@@ -1,5 +1,4 @@
 from fastapi import FastAPI, HTTPException, Response
-from fastapi.responses import StreamingResponse
 import httpx
 import time
 from typing import Dict
@@ -30,23 +29,36 @@ async def screenshot(url: str = None):
     
     try:
         async with httpx.AsyncClient() as client:
+            browserless_endpoint = f"{BROWSERLESS_URL}/chromium/screenshot"
+            print(f"Sending request to: {browserless_endpoint}")
+            
             response = await client.post(
-                f"{BROWSERLESS_URL}/screenshot",
+                browserless_endpoint,
                 json={"url": url},
                 timeout=30.0
             )
             
             if response.status_code != 200:
-                raise HTTPException(status_code=500, detail="Error from browserless service")
+                error_detail = response.text
+                print(f"Browserless error: Status {response.status_code} - {error_detail}")
+                raise HTTPException(
+                    status_code=500, 
+                    detail=f"Error from browserless service: {error_detail[:200]}"
+                )
             
             return Response(
                 content=response.content,
                 media_type="image/png",
                 headers={"Cache-Control": "public, max-age=10"}
             )
+    except httpx.RequestError as e:
+        error_msg = f"Request error: {str(e)}"
+        print(f"Error taking screenshot: {error_msg}")
+        raise HTTPException(status_code=500, detail=error_msg)
     except Exception as e:
-        print(f"Error taking screenshot: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error taking screenshot")
+        error_msg = str(e)
+        print(f"Error taking screenshot: {error_msg}")
+        raise HTTPException(status_code=500, detail=f"Error taking screenshot: {error_msg}")
 
 @app.get("/")
 async def root():
