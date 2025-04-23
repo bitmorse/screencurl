@@ -6,6 +6,7 @@ import os
 import uvicorn
 from fastapi.security.api_key import APIKeyQuery, APIKeyHeader, APIKeyCookie
 from datetime import datetime
+import pytz
 from collections import defaultdict
 
 app = FastAPI(title="screencurl")
@@ -17,9 +18,24 @@ screenshots_per_ip: Dict[str, int] = defaultdict(int)
 RATE_LIMIT_SECONDS = 10
 BROWSERLESS_URL = os.getenv("BROWSERLESS_URL", "http://localhost:9897")
 
+# Screenshot settings with defaults
+DEFAULT_VIEWPORT_WIDTH = int(os.getenv("DEFAULT_VIEWPORT_WIDTH", "1280"))
+DEFAULT_VIEWPORT_HEIGHT = int(os.getenv("DEFAULT_VIEWPORT_HEIGHT", "800"))
+WAIT_FOR_LOAD = os.getenv("WAIT_FOR_LOAD", "networkidle2")  # Other options: load, domcontentloaded, networkidle0
+
 # Parse tokens from environment variable
 TOKENS = os.getenv("TOKENS", "").split(",")
 TOKENS = [token.strip() for token in TOKENS if token.strip()]  # Remove empty tokens
+
+# Get timezone from environment variable or default to UTC
+TIMEZONE = os.getenv("TIMEZONE", "UTC")
+try:
+    TIMEZONE_OBJ = pytz.timezone(TIMEZONE)
+    print(f"Using timezone: {TIMEZONE}")
+except pytz.exceptions.UnknownTimeZoneError:
+    print(f"Unknown timezone: {TIMEZONE}, falling back to UTC")
+    TIMEZONE_OBJ = pytz.UTC
+    TIMEZONE = "UTC"
 
 # API key security schemes
 api_key_query = APIKeyQuery(name="token", auto_error=False)
@@ -46,27 +62,37 @@ async def get_api_key(
         headers={"WWW-Authenticate": "Bearer"},
     )
 
+def get_current_time():
+    """Get current time in the configured timezone with timezone info"""
+    return datetime.now(TIMEZONE_OBJ).strftime("%Y-%m-%d %H:%M:%S %Z")
+
 @app.get("/screenshot")
 async def screenshot(
     request: Request,
     url: str = None,
+    width: Optional[int] = None,
+    height: Optional[int] = None,
     token: str = Depends(get_api_key)
 ):
     if not url:
         raise HTTPException(status_code=400, detail="URL parameter is required")
     
+    # Use provided dimensions or defaults
+    viewport_width = width or DEFAULT_VIEWPORT_WIDTH
+    viewport_height = height or DEFAULT_VIEWPORT_HEIGHT
+    
     # Get client information for logging
     client_ip = request.client.host
     user_agent = request.headers.get("user-agent", "Unknown")
     referer = request.headers.get("referer", "Unknown")
-    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    current_time = get_current_time()
     
     # Increment screenshot count for this IP
     screenshots_per_ip[client_ip] += 1
     total_screenshots = screenshots_per_ip[client_ip]
     
     # Log the screenshot request with detailed information
-    print(f"[SCREENSHOT] Time: {current_time} | IP: {client_ip} | Total: {total_screenshots} | User-Agent: {user_agent} | Referer: {referer} | URL: {url}")
+    print(f"[SCREENSHOT] Time: {current_time} | IP: {client_ip} | Total: {total_screenshots} | User-Agent: {user_agent} | Referer: {referer} | URL: {url} | Resolution: {viewport_width}x{viewport_height}")
     
     # Check rate limit
     now = time.time()
@@ -83,7 +109,7 @@ async def screenshot(
             browserless_endpoint = f"{BROWSERLESS_URL}/chrome/screenshot"
             print(f"Sending request to: {browserless_endpoint}")
             
-            # Match the format from the curl example exactly
+            # Enhanced request with viewport and waiting options
             response = await client.post(
                 browserless_endpoint,
                 json={
@@ -91,6 +117,15 @@ async def screenshot(
                     "options": {
                         "fullPage": True,
                         "type": "png"
+                    },
+                    "gotoOptions": {
+                        "waitUntil": WAIT_FOR_LOAD,
+                        "timeout": 25000  # 25 seconds timeout for page load
+                    },
+                    "viewport": {
+                        "width": viewport_width,
+                        "height": viewport_height,
+                        "deviceScaleFactor": 1
                     }
                 },
                 timeout=30.0
@@ -108,7 +143,7 @@ async def screenshot(
             content_type = response.headers.get("content-type", "image/png")
             
             # Log successful screenshot
-            print(f"[SUCCESS] Screenshot generated for {url} by {client_ip}")
+            print(f"[SUCCESS] Screenshot generated for {url} by {client_ip} | Size: {len(response.content)} bytes")
             
             return Response(
                 content=response.content,
@@ -136,7 +171,11 @@ async def root(request: Request):
         auth_note = " No authentication required."
         
     return {
-        "message": f"Welcome to screencurl. Use /screenshot?url=https://example.com to get screenshots.{auth_note}"
+        "message": f"Welcome to screencurl. Use /screenshot?url=https://example.com to get screenshots.{auth_note}",
+        "options": {
+            "resolution": f"Default: {DEFAULT_VIEWPORT_WIDTH}x{DEFAULT_VIEWPORT_HEIGHT} (can be changed with width and height parameters)",
+            "wait_strategy": WAIT_FOR_LOAD
+        }
     }
 
 if __name__ == "__main__":
@@ -144,4 +183,6 @@ if __name__ == "__main__":
     print(f"screencurl service listening at http://localhost:{port}")
     print(f"Using Browserless at {BROWSERLESS_URL}")
     print(f"Authentication {'enabled with ' + str(len(TOKENS)) + ' tokens' if TOKENS else 'disabled'}")
+    print(f"Default screenshot resolution: {DEFAULT_VIEWPORT_WIDTH}x{DEFAULT_VIEWPORT_HEIGHT}")
+    print(f"Page load wait strategy: {WAIT_FOR_LOAD}")
     uvicorn.run("main:app", host="0.0.0.0", port=port, log_level="info")
