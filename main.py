@@ -29,12 +29,19 @@ async def screenshot(url: str = None):
     
     try:
         async with httpx.AsyncClient() as client:
-            browserless_endpoint = f"{BROWSERLESS_URL}/chromium/screenshot"
+            browserless_endpoint = f"{BROWSERLESS_URL}/chrome/screenshot"
             print(f"Sending request to: {browserless_endpoint}")
             
+            # Match the format from the curl example for better compatibility
             response = await client.post(
                 browserless_endpoint,
-                json={"url": url},
+                json={
+                    "url": url,
+                    "options": {
+                        "fullPage": True,
+                        "type": "png"
+                    }
+                },
                 timeout=30.0
             )
             
